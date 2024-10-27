@@ -68,7 +68,7 @@ def video_length(video_path):
     length = video.get(cv2.CAP_PROP_FRAME_COUNT) / fps
     video.release()
     #round length
-    return round(length)
+    return length
 
 # extract_frame_at(video_path, 2)
 # video_length("1.mp4")

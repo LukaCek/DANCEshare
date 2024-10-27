@@ -4,6 +4,7 @@ from flask import Flask, flash, redirect, render_template, request, session, g, 
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import random
+from time import time as nowtime
 
 import video_helper
 from helpers import login_required, allowed_file
@@ -20,7 +21,12 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 DATABASE = 'danceshare.db'
-ALLOWED_EXTENSIONS = {'mp4'}
+ALLOWED_EXTENSIONS = [
+        '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
+        '.m4v', '.3gp', '.ts', '.mts', '.m2ts', '.vob', '.ogv',
+        '.mxf', '.mpg', '.mpeg', '.m2v', '.divx', '.f4v', '.rm',
+        '.rmvb', '.asf', '.dat'
+    ]
 
 # Create database if it doesn't exist
 if not os.path.exists(DATABASE):
@@ -173,7 +179,13 @@ def uploade():
 
         # Check if file was uploaded
         if not file:
+            print("No file was uploaded.")
             return render_template("uploade.html", error="No file was uploaded."), 400
+        
+        # Check if file type is allowed
+        if allowed_file(file.filename, ALLOWED_EXTENSIONS):
+            print("File type not allowed.")
+            return render_template("uploade.html", error="File type not allowed."), 400
 
         # conect to db
         con = sqlite3.connect(DATABASE)
@@ -188,8 +200,8 @@ def uploade():
             id = 1
         
 
-        # rename file
-        file.filename = f"{session['user_id']}_{random.randint(1, 9999)}.{file.filename.split('.')[-1].lower()}"
+        # rename file to avoid overwriting existing files (in temp folder)
+        file.filename = f"{session['user_id']}_{random.randint(1, 9999)}_{round(nowtime()*1000000)}.{file.filename.split('.')[-1].lower()}"
 
         # Convert to mp4
         filetype = file.filename.split('.')[-1].lower()
@@ -204,14 +216,14 @@ def uploade():
         image_path = f"{UPLOAD_FOLDER}{id}.jpg"
         print(f"File path: {file_path}")
         
-        # Save file
-        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS):
+        
+        if file:
             # create folder if it doesent exist
             if not os.path.exists(UPLOAD_FOLDER):
                 os.makedirs(UPLOAD_FOLDER)
             file.save(file_path)
         else:
-            return render_template("uploade.html", error="File type is not allowed", types=ALLOWED_EXTENSIONS), 400
+            return render_template("uploade.html", error="Error 123"), 400
 
         # Get time from video
         time = video_helper.video_length(file_path)
