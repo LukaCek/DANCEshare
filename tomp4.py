@@ -15,7 +15,7 @@ def convert_to_mp4(video_file):
         video_file: FileStorage object from request.files
         
     Returns:
-        FileStorage: Converted MP4 file if successful, None if failed
+        tuple: (FileStorage, size) of converted MP4 file if successful, None if failed
     """
     temp_path = None
     output_path = None
@@ -47,7 +47,7 @@ def convert_to_mp4(video_file):
             'ffmpeg',
             '-i', temp_path,
             '-c:v', 'libx264',     # Video codec
-            '-preset', 'medium',    # Compression preset
+            '-preset', 'medium',   # Compression preset
             '-crf', '23',          # Constant Rate Factor (quality)
             '-c:a', 'aac',         # Audio codec
             '-b:a', '128k',        # Audio bitrate
@@ -81,8 +81,14 @@ def convert_to_mp4(video_file):
             filename=output_filename,
             content_type='video/mp4'
         )
+
+        # get the size of the converted file
+        try:
+            converted_file_size = os.path.getsize(output_path)
+        except:
+            converted_file_size = None
         
-        return converted_file
+        return converted_file, converted_file_size
         
     except subprocess.TimeoutExpired:
         print("Conversion timed out after 5 minutes")
@@ -101,5 +107,28 @@ def convert_to_mp4(video_file):
         if output_path and os.path.exists(output_path):
             try:
                 os.remove(output_path)
+            except:
+                pass
+
+def video_size_save(video_file):
+    temp_path = None
+    try:
+        # Create temporary directory if it doesn't exist
+        temp_dir = 'temp_uploads'
+        os.makedirs(temp_dir, exist_ok=True)
+
+        temp_filename = str(uuid.uuid4()) + '_' + secure_filename(video_file.filename)
+        temp_path = os.path.join(temp_dir, temp_filename)
+
+        # Save uploaded file temporarily
+        video_file.save(temp_path)
+
+        return os.path.getsize(temp_path)
+    
+    finally:
+        # Clean up temporary files
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
             except:
                 pass

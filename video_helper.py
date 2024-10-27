@@ -63,12 +63,18 @@ def extract_frame_at(video_path, time=2):
 
 def video_length(video_path):
     """Get the length of a video in seconds"""
-    video = cv2.VideoCapture(video_path)
-    fps = video.get(cv2.CAP_PROP_FPS)
-    length = video.get(cv2.CAP_PROP_FRAME_COUNT) / fps
-    video.release()
-    #round length
-    return length
+    if video_path:
+        video = cv2.VideoCapture(video_path)
+        fps = video.get(cv2.CAP_PROP_FPS)
+        frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+        length = frames / fps
+        video.release()
+        return length
 
-# extract_frame_at(video_path, 2)
-# video_length("1.mp4")
+def video_size(video_path):
+    """Get the size of a video in bytes"""
+    if video_path:
+        video = cv2.VideoCapture(video_path)
+        size = os.path.getsize(video_path)
+        video.release()
+        return size

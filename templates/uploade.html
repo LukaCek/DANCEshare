@@ -153,11 +153,11 @@ button:hover {
         
         <label for="description">Description:</label>
         <input id="description" type="text" name="description" placeholder="Video Description">
-        
-        {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
-        {% if success %}<p style="color: green;">{{ success }}</p>{% endif %}
 
         <button type="submit">Upload</button>
+
+        {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+        {% if success %}<p style="color: green;">{{ success }}</p>{% endif %}
 
         <div id="loader" class="loader" style="display: none;"></div>
     </form>

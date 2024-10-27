@@ -8,9 +8,17 @@ from time import time as nowtime
 
 import video_helper
 from helpers import login_required, allowed_file
-from tomp4 import convert_to_mp4
+from tomp4 import convert_to_mp4, video_size_save
 
 UPLOAD_FOLDER = 'static/uploads/vid/'
+SIZE_ALLOWED = 1 * 1024 * 1024 * 1024
+DATABASE = 'danceshare.db'
+ALLOWED_EXTENSIONS = [
+        '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
+        '.m4v', '.3gp', '.ts', '.mts', '.m2ts', '.vob', '.ogv',
+        '.mxf', '.mpg', '.mpeg', '.m2v', '.divx', '.f4v', '.rm',
+        '.rmvb', '.asf', '.dat'
+    ]
 
 # Preverimo ali mapa za nalaganje datotek že obstaja, če ne jo ustvarimo
 if not os.path.exists(UPLOAD_FOLDER):
@@ -19,14 +27,6 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Configure application
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-DATABASE = 'danceshare.db'
-ALLOWED_EXTENSIONS = [
-        '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
-        '.m4v', '.3gp', '.ts', '.mts', '.m2ts', '.vob', '.ogv',
-        '.mxf', '.mpg', '.mpeg', '.m2v', '.divx', '.f4v', '.rm',
-        '.rmvb', '.asf', '.dat'
-    ]
 
 # Create database if it doesn't exist
 if not os.path.exists(DATABASE):
@@ -37,7 +37,8 @@ if not os.path.exists(DATABASE):
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
-            hash TEXT NOT NULL
+            hash TEXT NOT NULL,
+            size INTEGER
         );
     ''')
     cur.execute('''
@@ -51,6 +52,7 @@ if not os.path.exists(DATABASE):
             description TEXT,
             group_id TEXT,
             time INTEGER,
+            file_size INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
@@ -157,7 +159,7 @@ def register():
         
         # Save user in db
         hash = generate_password_hash(password)
-        cur.execute("INSERT INTO users (username, hash) VALUES (?, ?);", (username, hash))
+        cur.execute("INSERT INTO users (username, hash, size) VALUES (?, ?, 0);", (username, hash))
         con.commit()
 
         # Get the id of the user from the database
@@ -203,20 +205,37 @@ def uploade():
         # rename file to avoid overwriting existing files (in temp folder)
         file.filename = f"{session['user_id']}_{random.randint(1, 9999)}_{round(nowtime()*1000000)}.{file.filename.split('.')[-1].lower()}"
 
-        # Convert to mp4
+        # Convert to mp4 and get file size
         filetype = file.filename.split('.')[-1].lower()
         if filetype != 'mp4':
             print("Converting to mp4")
-            converted_file = convert_to_mp4(file)
+            temp = convert_to_mp4(file)
+            converted_file = temp[0]
+            file_size = temp[1]
             if converted_file is not None:
                 file = converted_file
                 print("Converted to mp4")
+        else:
+            file_size = video_size_save(file)
 
         file_path = f"{UPLOAD_FOLDER}{id}.mp4"
         image_path = f"{UPLOAD_FOLDER}{id}.jpg"
         print(f"File path: {file_path}")
         
-        
+        # check if user reached limit of all videos size
+        cur.execute("SELECT SUM(file_size) FROM videos WHERE user_id = :user_id",{"user_id": session["user_id"]})
+        t = cur.fetchone()
+        size = t[0]
+        if size is None:
+            size = 0
+        if size + file_size > SIZE_ALLOWED:
+            error = f"Space limit has been reached {SIZE_ALLOWED / 1024 / 1024 / 1024} GB. <br>You have {SIZE_ALLOWED / 1024 / 1024 / 1024 - size / 1024 / 1024 / 1024} <br>Upgrade your plan or delete some videos"
+            print(error)
+            return render_template("uploade.html", error=error), 400
+        # vrite to user table size
+        cur.execute("UPDATE users SET size = :size WHERE id = :user_id",{"size": size + file_size, "user_id": session["user_id"]})
+        con.commit()
+
         if file:
             # create folder if it doesent exist
             if not os.path.exists(UPLOAD_FOLDER):
@@ -231,8 +250,12 @@ def uploade():
         # Create picture
         video_helper.extract_frame_at(file_path)
 
-        cur.execute("INSERT INTO `videos` (`name`, `filepath`, `user_id`, `filetype`, `description`, `group_id`, `time`, `image_path`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                    , (name, file_path, session["user_id"], filetype, description, group, time, image_path))
+        # Video size
+        file_size = video_helper.video_size(file_path)
+        print(f"File size: {file_size}")
+
+        cur.execute("INSERT INTO `videos` (`name`, `filepath`, `user_id`, `filetype`, `description`, `group_id`, `time`, `image_path`, `file_size`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    , (name, file_path, session["user_id"], filetype, description, group, time, image_path, file_size))
         con.commit()
 
 
