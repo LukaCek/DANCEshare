@@ -16,9 +16,10 @@ def login_required(f):
 
     return decorated_function
 
+# Check if file type is allowed
 def allowed_file(filename, ALLOWED_EXTENSIONS):
     t = filename.split('.')[-1].lower()
     print(t)
     if t in ALLOWED_EXTENSIONS:
-        return True
+        return False # File type is allowed (now turnd off with False (all files are allowed)) can be turnd on with True
     return False

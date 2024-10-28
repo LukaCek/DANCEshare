@@ -11,13 +11,13 @@ from helpers import login_required, allowed_file
 from tomp4 import convert_to_mp4, video_size_save
 
 UPLOAD_FOLDER = 'static/uploads/vid/'
-SIZE_ALLOWED = 1 * 1024 * 1024 * 1024
+SIZE_ALLOWED = 2 * 1024 * 1024 * 1024
 DATABASE = 'danceshare.db'
 ALLOWED_EXTENSIONS = [
-        '.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm',
-        '.m4v', '.3gp', '.ts', '.mts', '.m2ts', '.vob', '.ogv',
-        '.mxf', '.mpg', '.mpeg', '.m2v', '.divx', '.f4v', '.rm',
-        '.rmvb', '.asf', '.dat'
+        'mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm',
+        'm4v', '3gp', 'ts', 'mts', 'm2ts', 'vob', 'ogv',
+        'mxf', 'mpg', 'mpeg', 'm2v', 'divx', 'f4v', 'rm',
+        'rmvb', 'asf', 'dat', 'wmv', 'mpg'
     ]
 
 # Preverimo ali mapa za nalaganje datotek že obstaja, če ne jo ustvarimo
@@ -201,24 +201,35 @@ def uploade():
         else:
             id = 1
         
-
-        # rename file to avoid overwriting existing files (in temp folder)
-        file.filename = f"{session['user_id']}_{random.randint(1, 9999)}_{round(nowtime()*1000000)}.{file.filename.split('.')[-1].lower()}"
-
-        # Convert to mp4 and get file size
+        # get file type
         filetype = file.filename.split('.')[-1].lower()
+        
+        # rename file to avoid overwriting existing files (in temp folder)
+        file.filename = f"{session['user_id']}_{random.randint(1, 9999)}_{round(nowtime()*1000000)}.{filetype}"
+
+        # check if file is mp4 widouth modification
         if filetype != 'mp4':
             print("Converting to mp4")
             temp = convert_to_mp4(file)
+            if temp is None:
+                return render_template("uploade.html", error="File conversion failed."), 400
             converted_file = temp[0]
             file_size = temp[1]
+            print(f"Converted file: {converted_file}")
+            print(f"File size: {file_size}")
             if converted_file is not None:
                 file = converted_file
                 print("Converted to mp4")
         else:
-            file_size = video_size_save(file)
+            # extract file size
+            f = video_size_save(file)
+            file_size = f[1]
+            file = f[0]
 
-        file_path = f"{UPLOAD_FOLDER}{id}.mp4"
+            if file_size is None:
+                return render_template("uploade.html", error="Failed to get video size(mp4)."), 400
+
+        file_path = os.path.join(UPLOAD_FOLDER, f"{id}.mp4")
         image_path = f"{UPLOAD_FOLDER}{id}.jpg"
         print(f"File path: {file_path}")
         
@@ -228,6 +239,7 @@ def uploade():
         size = t[0]
         if size is None:
             size = 0
+
         if size + file_size > SIZE_ALLOWED:
             error = f"Space limit has been reached {SIZE_ALLOWED / 1024 / 1024 / 1024} GB. <br>You have {SIZE_ALLOWED / 1024 / 1024 / 1024 - size / 1024 / 1024 / 1024} <br>Upgrade your plan or delete some videos"
             print(error)
@@ -257,7 +269,6 @@ def uploade():
         cur.execute("INSERT INTO `videos` (`name`, `filepath`, `user_id`, `filetype`, `description`, `group_id`, `time`, `image_path`, `file_size`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     , (name, file_path, session["user_id"], filetype, description, group, time, image_path, file_size))
         con.commit()
-
 
         return render_template("uploade.html", massage="Video uploaded successfully")
     else:
