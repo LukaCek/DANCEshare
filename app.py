@@ -42,6 +42,27 @@ if not os.path.exists(DATABASE):
         );
     ''')
     cur.execute('''
+        CREATE TABLE IF NOT EXISTS groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            creator_id INTEGER NOT NULL,
+            created_at INTEGER,
+            FOREIGN KEY (creator_id) REFERENCES users (id)
+        )
+    ''')
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS group_members (
+            group_id INTEGER,
+            user_id INTEGER,
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            role TEXT DEFAULT "member",
+            PRIMARY KEY (group_id, user_id),
+            FOREIGN KEY (group_id) REFERENCES groups (id),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -50,7 +71,7 @@ if not os.path.exists(DATABASE):
             image_path TEXT,
             filetype TEXT NOT NULL,
             description TEXT,
-            group_id TEXT,
+            group_id INTEGER,
             time INTEGER,
             file_size INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users (id)
