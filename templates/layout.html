@@ -24,14 +24,14 @@
         <img class="main-ico" id="main-upload" src="{{ url_for('static', filename='ico/upload.svg') }}" alt="Upload" onclick="redirectToPage('/upload')">
       </div>
       <div class="col-auto d-flex justify-content-center align-items-center">
-        <img class="main-ico" id="main-edit" src="{{ url_for('static', filename='ico/edition.svg') }}" alt="Edit" onclick="redirectToPage('/edit')">
+        <img class="main-ico" id="main-options" src="{{ url_for('static', filename='ico/options.svg') }}" alt="options" onclick="redirectToPage('/options')">
       </div>
     </nav>
   </footer>
 </body>
 <link rel="prefetch" href="/home">
 <link rel="prefetch" href="/upload">
-<link rel="prefetch" href="/edit">
+<link rel="prefetch" href="/options">
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 {% block script %}{% endblock %}
 </html>

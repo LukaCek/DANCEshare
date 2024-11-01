@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block title %}Options{% endblock %}
+
+{% block styles %}<style>
+html {
+    margin-left: 15px;
+    margin-right: 15px;
+    text-align: left;
+}
+h1 {
+    text-align: center;
+    margin-top: 10px;
+}
+p {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    font-size: 20px;
+}
+</style>{% endblock %}
+
+{% block main %}
+<h1>Options</h1><hr>
+        <div class="menu-item" onclick="handleOption('create')">
+            <p>Create Group</p>
+        </div><hr>
+        <div class="menu-item" onclick="handleOption('join')">
+            <p>Join Group</p>
+        </div><hr>
+        <div class="menu-item" onclick="handleOption('browse')">
+            <p>Browse Group</p>
+        </div><hr>
+        <div class="menu-item" onclick="handleOption('leave')">
+            <p>Leave Group</p>
+        </div><hr>
+{% endblock %}
+
+{% block script %}<script>
+function handleOption(action) {
+    switch(action) {
+        case 'create':
+            window.location.href = '/create-group';
+            break;
+        case 'join':
+            window.location.href = '/join-group';
+            break;
+        case 'browse':
+            window.location.href = '/browse-groups';
+            break;
+        case 'leave':
+            window.location.href = '/leave-group';
+            break;
+    }
+}
+</script>{% endblock %}

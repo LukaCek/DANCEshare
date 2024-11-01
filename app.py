@@ -295,6 +295,17 @@ def uploade():
     else:
         return render_template("uploade.html")
 
+@app.route("/options", methods=["GET"])
+def options():
+    return render_template("options.html")
+
+@app.route("/create-group", methods=["GET", "POST"])
+def create_group():
+    if request.method == "POST":
+        return "TODO"
+    else:
+        return render_template("create-group.html")
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
