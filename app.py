@@ -47,7 +47,8 @@ if not os.path.exists(DATABASE):
             name TEXT NOT NULL,
             description TEXT,
             creator_id INTEGER NOT NULL,
-            created_at INTEGER,
+            created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            public BOOLEAN NOT NULL DEFAULT FALSE,
             FOREIGN KEY (creator_id) REFERENCES users (id)
         )
     ''')
@@ -302,7 +303,39 @@ def options():
 @app.route("/create-group", methods=["GET", "POST"])
 def create_group():
     if request.method == "POST":
-        return "TODO"
+        name = request.form.get("name")
+        description = request.form.get("description")
+        public = request.form.get("public")
+
+        # check if form is fealed
+        if name == "" or description == "" or public == "":
+            return render_template("create-group.html", error="Form not fealed!"), 400
+        
+        # reformat public
+        if public == "on":
+            public = True
+        else:
+            public = False
+
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # check if group exists
+        cur.execute("SELECT * FROM `groups` WHERE `name` = ?", (name,))
+        result = cur.fetchone()
+
+        # if group exists
+        if result is not None:
+            con.close() # close db
+            return render_template("create-group.html", error="Group already exists!"), 400
+
+        # create group
+        cur.execute("INSERT INTO `groups` (`name`, `description`, 'creator_id', 'public') VALUES (?, ?, ?, ?)", (name, description, session["user_id"], public))
+        con.commit()
+
+        con.close() # close db
+        return render_template("create-group.html", success="Group created successfully!")
     else:
         return render_template("create-group.html")
 

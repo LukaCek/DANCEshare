@@ -3,29 +3,39 @@
 {% block title %}Create Group{% endblock %}
 
 {% block styles %}<style>
+    form {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 600px;
+    }
     h1 {
         text-align: center;
         margin-top: 10px;
     }
-    div.mb-3 {
+    div.mb-3, p {
         margin-left: 30px;
         margin-right: 30px;
     }
 </style>{% endblock %}
 
 {% block main %}
-<h1>Create Group</h1>
+<h1>Create Group</h1><br>
 <form action="/create-group" method="post">
     <div class="mb-3">
-        <label for="name" class="form-label">Group name: *</label>
+        <label for="name" class="form-label">Group name:</label>
         <input id="name" type="text" name="name" placeholder="Group Name" class="form-control" required>
     </div>
     <div class="mb-3">
         <label for="description">Description:</label>
-        <input id="description" type="text" name="description" class="form-control" placeholder="Group Description"></label>
+        <input id="description" type="text" name="description" class="form-control" placeholder="Group Description" required></label>
         <div id="emailHelp" class="form-text">The description of the group will be public.</div>
     </div>
-
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="public" name="public">
+        <label class="form-check-label" for="public">Create Group Public</label>
+    </div>
+    {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+    {% if success %}<p style="color: green; background-color: rgba(0, 128, 0, 0.352);"><b>{{ success }}</b></p>{% endif %}
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 {% endblock %}

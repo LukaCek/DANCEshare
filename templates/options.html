@@ -34,6 +34,9 @@ p {
         <div class="menu-item" onclick="handleOption('leave')">
             <p>Leave Group</p>
         </div><hr>
+        <div class="menu-item" onclick="handleOption('edit')">
+            <p>Edit Group</p>
+        </div><hr>
 {% endblock %}
 
 {% block script %}<script>
@@ -50,6 +53,9 @@ function handleOption(action) {
             break;
         case 'leave':
             window.location.href = '/leave-group';
+            break;
+        case 'edit':
+            window.location.href = '/edit-group';
             break;
     }
 }
