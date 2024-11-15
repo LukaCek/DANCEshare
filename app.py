@@ -339,6 +339,43 @@ def create_group():
     else:
         return render_template("create-group.html")
 
+@app.route("/browse-groups", methods=["GET"])
+def browse_groups():
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+
+    # get groups from db
+    cur.execute("SELECT * FROM `groups`")
+    groups = cur.fetchall()
+
+    # close db
+    con.close()
+    return render_template("browse-groups.html", groups=groups, user_id=session["user_id"])
+
+@app.route("/group/<int:group_id>/join")
+def group(group_id):
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+
+    # check if user is already in group
+    cur.execute("SELECT * FROM `group_members` WHERE `group_id` = ? AND `user_id` = ?", (group_id, session["user_id"]))
+    result = cur.fetchone()
+
+    # if user is already in group
+    if result is not None:
+        con.close() # close db
+        return render_template("browse-groups.html", error="You are already in this group!"), 400
+
+    # add user to group
+    cur.execute("INSERT INTO `group_members` (`group_id`, `user_id`) VALUES (?, ?)", (group_id, session["user_id"]))
+    con.commit()
+
+    # close db
+    con.close()
+    return render_template("browse-groups.html", success="You have joined the group successfully!")
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
