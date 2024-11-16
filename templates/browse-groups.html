@@ -21,7 +21,6 @@
 <h1>Browse Group</h1>
 {% if success %}<p style="color: green; background-color: rgba(0, 128, 0, 0.352);"><b>{{ success }}</b></p>{% endif %}
 {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
-
 {% for group in groups %}
 <!-- check if user owns the group OR if the group is public -->
 {% if group[5] or user_id == group[3] %}
@@ -33,7 +32,11 @@
             <p class="card-text mb-0">{{ group[2] }}</p>
         </div>
         <!-- TODO: imploment join button -->
+        {% if not group[6] %}
         <a href="/group/{{ group[0] }}/join" class="btn btn-primary">Join</a>
+        {% else %}
+        <a href="/group/{{ group[0] }}/leave" class="btn btn-danger">Leave</a>
+        {% endif %}
     </div>
 </div>
 {% endif %}{% endfor %}

@@ -345,8 +345,20 @@ def browse_groups():
     con = sqlite3.connect(DATABASE)
     cur = con.cursor()
 
-    # get groups from db
-    cur.execute("SELECT * FROM `groups`")
+    # get groups with membership status for current user
+    # Using LEFT JOIN to show all groups, even if user isn't a member
+    cur.execute("""
+        SELECT 
+            g.*,
+            CASE 
+                WHEN gm.user_id IS NOT NULL THEN 1 
+                ELSE 0 
+            END as is_member
+        FROM groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id 
+            AND gm.user_id = ?
+        ORDER BY is_member DESC
+    """, (session["user_id"],))
     groups = cur.fetchall()
 
     # close db
@@ -374,7 +386,21 @@ def group(group_id):
 
     # close db
     con.close()
-    return render_template("browse-groups.html", success="You have joined the group successfully!")
+    return redirect("/browse-groups")
+
+@app.route("/group/<int:group_id>/leave")
+def leave_group(group_id):
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+
+    # remove user from group
+    cur.execute("DELETE FROM `group_members` WHERE `group_id` = ? AND `user_id` = ?", (group_id, session["user_id"]))
+    con.commit()
+
+    # close db
+    con.close()
+    return redirect("/browse-groups")
 
 @app.errorhandler(404)
 def page_not_found(e):
