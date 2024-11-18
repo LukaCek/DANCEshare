@@ -2,6 +2,32 @@
 
 {% block title %}home{% endblock %}
 
+{% block styles %}<style>
+    .video {
+        max-height: 450px;
+    }
+    .name-box {
+        padding: 5px;
+        padding-bottom: 0px;
+    }
+    .card {
+        margin-bottom: 5px;
+        margin-top: 5px;
+    }
+    /* phone */
+    @media only screen and (max-width: 600px) {
+        .video {
+            max-height: 80%;
+        }
+        .card {
+            max-width: 96%;
+            margin: 0 auto;
+            margin-top: 5px;
+            float: none;
+        }
+    }
+</style>{% endblock %}
+
 {% block main %}
 <form class="form-inline" style="background-color: #160d1c; padding: 10px;">
     <input style="border-radius: 50px;" class="form-control mr-sm-2" type="search" placeholder="Search"
@@ -13,18 +39,15 @@
         <div class="card h-100">
             <!-- video's video-->
             {% if video[0] %}
-            <video controls>
+            <video controls class="video">
                 <source src="{{ video[0] }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
             {% endif %}
-            {{ video[1] }}
             <!-- video's details-->
-            <div class="card-body p-4">
-                <div class="text-center">
-                    <!-- video's name-->
-                    <h5 class="fw-bolder">{{ name }}</h5>
-                </div>
+            <div class="text-center name-box">
+                <!-- video's name-->
+                <h5 class="fw-bolder">{{ video[1] }}</h5>
             </div>
         </div>
         {% endfor %}
