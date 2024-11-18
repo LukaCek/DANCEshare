@@ -145,11 +145,16 @@ button:hover {
         <label for="video">Video: *</label>
         <input id="video" type="file" name="video" accept="video/*" required>
         
-        <label for="group">Group:</label>
-        <input id="group" type="text" name="group" placeholder="Group Name">
-        
         <label for="name">Name: *</label>
         <input id="name" type="text" name="name" placeholder="Name" required>
+        
+        <label for="group">Group:</label>
+        <select id="group" name="group" style="border: 1px solid #ddd; border-radius: 4px; padding: 8px; width: 100%;">
+            <option value="None" disabled selected>Select Group</option>
+            {% for group in groups %}
+            <option value="{{ group[0] }}">{{ group[1] }}</option>
+            {% endfor %}
+        </select>
         
         <label for="description">Description:</label>
         <input id="description" type="text" name="description" placeholder="Video Description">

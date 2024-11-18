@@ -294,7 +294,21 @@ def uploade():
 
         return render_template("uploade.html", massage="Video uploaded successfully")
     else:
-        return render_template("uploade.html")
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+        # get groups
+        # get groups from user
+        cur.execute("""
+            SELECT g.id, g.name 
+            FROM group_members gm 
+            JOIN groups g ON gm.group_id = g.id 
+            WHERE gm.user_id = ?
+        """, (session["user_id"],))
+        groups = cur.fetchall()
+        con.close()
+
+        return render_template("uploade.html", groups=groups)
 
 @app.route("/options", methods=["GET"])
 def options():
@@ -341,6 +355,7 @@ def create_group():
 
 @app.route("/browse-groups", methods=["GET"])
 def browse_groups():
+    '''list of public groups and groups user is in'''
     # conect to db
     con = sqlite3.connect(DATABASE)
     cur = con.cursor()
