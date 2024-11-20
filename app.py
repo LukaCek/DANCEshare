@@ -430,6 +430,63 @@ def create_group():
     else:
         return render_template("create-group.html")
 
+@app.route("/edit-group/<group_id>", methods=["GET", "POST"])
+@login_required
+def edit_group(group_id):
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description")
+        password = request.form.get("password")
+        public = request.form.get("public")
+
+        # check if form is fealed
+        if name == "" or description == "" or public == "":
+            return render_template("edit-group.html", error="Form not fealed!"), 400
+        
+        # reformat public
+        if public == "on":
+            public = True
+        else:
+            public = False
+
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # check if password is fealed
+        if password == "" or password is None:
+            '''don't change hash'''
+            # update group
+            cur.execute("UPDATE `groups` SET `name` = ?, `description` = ?, `public` = ? WHERE `id` = ?", (name, description, public, group_id))
+            con.commit()
+        else:
+            hash = generate_password_hash(password)
+            # update group
+            cur.execute("UPDATE `groups` SET `name` = ?, `description` = ?, `public` = ?, `hash` = ? WHERE `id` = ?", (name, description, public, hash, group_id))
+            con.commit()
+
+        con.close() # close db
+        return redirect(f"/browse-groups")
+    else:
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # check if user is creator of group
+        cur.execute("SELECT creator_id FROM `groups` WHERE `id` = ?", (group_id,))
+        result = cur.fetchone()[0]
+        # if user is not creator of group
+        if result != session["user_id"]:
+            con.close() # close db
+            return render_template("edit-group.html", error="You are not the creator of this group!"), 400
+
+        # get group info
+        cur.execute("SELECT name, description, public FROM groups WHERE `id` = ?", (group_id, ))
+        result = cur.fetchone()
+
+        con.close() # close db
+        return render_template("edit-group.html", group_id=group_id, name=result[0], description=result[1], public=result[2])
+
 @app.route("/browse-groups", methods=["GET"])
 @login_required
 def browse_groups():

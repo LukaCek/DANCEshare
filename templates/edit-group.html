@@ -97,15 +97,15 @@ div.mb-3, p {
 </style>{% endblock %}
 
 {% block main %}
-<h1>Create Group</h1><br>
-<form action="/create-group" method="post">
+<h1>Edit Group</h1><br>
+<form action="/edit-group/{{ group_id }}" method="post">
     <div class="mb-3">
         <label for="name" class="form-label">Group name:</label>
-        <input id="name" type="text" name="name" placeholder="Group Name" class="form-control" required>
+        <input id="name" type="text" name="name" placeholder="Group Name" class="form-control" value="{{ name }}" required>
     </div>
     <div class="mb-3">
         <label for="description">Description:</label>
-        <input id="description" type="text" name="description" class="form-control" placeholder="Group Description" required></label>
+        <input id="description" type="text" value="{{ description }}" name="description" class="form-control" placeholder="Group Description" required></label>
         <div id="emailHelp" class="form-text">The description of the group will be public.</div>
     </div>
     <div class="mb-3">
@@ -113,20 +113,20 @@ div.mb-3, p {
             <label for="password" class="me-2">Password:</label>
             <p style="color: gray; margin: 0;" class="mb-0">not required</p>
         </div>
-        <input id="password" type="text" name="password" class="form-control" placeholder="Password" autocomplete="off"></label>
+        <input id="password" type="text" name="password" class="form-control" placeholder="Change Password" autocomplete="off"></label>
         <div class="form-text">will be uset to join the group</div>
     </div>
     <div class="mb-3" style="display: flex; justify-content: center;">
         <label for="public">Private</label>
         <div class="checkbox-wrapper-9" style="margin-left: 10px; margin-right: 10px;">
-            <input class="tgl tgl-flat" id="public" name="public" type="checkbox"/>
+            <input class="tgl tgl-flat" id="public" {% if public %}checked{% endif %} name="public" type="checkbox"/>
             <label class="tgl-btn" for="public"></label>
           </div>
         <label for="public">Public</label>
     </div>
     {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
     {% if success %}<p style="color: green; background-color: rgba(0, 128, 0, 0.352);"><b>{{ success }}</b></p>{% endif %}
-    <button type="submit" class="btn btn-primary">Submit</button>
+    <button type="submit" class="btn btn-primary">Update</button>
 </form>
 {% endblock %}
 
