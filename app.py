@@ -130,12 +130,28 @@ def search():
         con = sqlite3.connect(DATABASE)
         cur = con.cursor()
 
+        # gets groups in vitch is user
+        cur.execute("""
+            SELECT g.id 
+            FROM group_members gm 
+            JOIN groups g ON gm.group_id = g.id 
+            WHERE gm.user_id = ?
+        """, (session["user_id"],))
+        groupsUserIsIn = cur.fetchall()
+
         # get videos from user
         if group == "All":
-            cur.execute("SELECT filepath, name FROM videos WHERE user_id = :user_id AND name LIKE :q" ,{"user_id": session["user_id"], "q": f"%{q}%"})
+            print("#"*50 + "---")
+            print(f"groupsUserIsIn: {groupsUserIsIn}")
+            # TODO: fix
+            videos = []
+            for g in groupsUserIsIn:
+                cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q" ,{"group": g[0], "q": f"%{q}%"})
+                videos += cur.fetchall()
+                print(f"videos: {videos}")
         else:
-            cur.execute("SELECT filepath, name FROM videos WHERE user_id = :user_id AND name LIKE :q AND group_id = :group" ,{"user_id": session["user_id"], "q": f"%{q}%", "group": group})
-        videos = cur.fetchall()
+            cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q AND group_id = :group" ,{"group": group, "q": f"%{q}%", "group": group})
+            videos = cur.fetchall()
         print("#"*50)
         print(f"q: {q}")
         print(f"group: {group}")
@@ -395,6 +411,14 @@ def create_group():
 
         # create group
         cur.execute("INSERT INTO `groups` (`name`, `description`, 'creator_id', 'public') VALUES (?, ?, ?, ?)", (name, description, session["user_id"], public))
+        con.commit()
+
+        # get id of created group
+        cur.execute("SELECT last_insert_rowid()")
+        group_id = cur.fetchone()[0]
+
+        # add user to group
+        cur.execute("INSERT INTO `group_members` (`group_id`, `user_id`) VALUES (?, ?)", (group_id, session["user_id"]))
         con.commit()
 
         con.close() # close db
