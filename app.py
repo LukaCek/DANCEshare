@@ -94,19 +94,40 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
+    post = False
+    if request.method == "POST":
+        post = True
+        group = request.form.get("group")
+        q = request.form.get("q")
+        print(f"TODO TODO {group}")
+        print(f"TODO TODO {q}")
     # conect to db
     con = sqlite3.connect(DATABASE)
     cur = con.cursor()
 
     # get videos from user
-    cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id",{"user_id": session["user_id"]})
+    if post and q:
+        cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id AND name LIKE :q",{"user_id": session["user_id"], "q": f"%{q}%"})
+    else:
+        cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id",{"user_id": session["user_id"]})
     videos = cur.fetchall()
     num_videos = len(videos)
 
-    return render_template("index.html", username=session["user_id"] , num_videos=num_videos, videos=videos)
+    # get groups
+    # get groups from user
+    cur.execute("""
+        SELECT g.id, g.name 
+        FROM group_members gm 
+        JOIN groups g ON gm.group_id = g.id 
+        WHERE gm.user_id = ?
+    """, (session["user_id"],))
+    groups = cur.fetchall()
+    con.close()
+
+    return render_template("index.html", username=session["user_id"] , num_videos=num_videos, videos=videos, groups=groups)
 
 @app.route("/delete_account", methods=["GET", "POST"])
 @login_required
