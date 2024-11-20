@@ -49,6 +49,7 @@ if not os.path.exists(DATABASE):
             creator_id INTEGER NOT NULL,
             created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
             public BOOLEAN NOT NULL DEFAULT FALSE,
+            hash TEXT DEFAULT NULL,
             FOREIGN KEY (creator_id) REFERENCES users (id)
         )
     ''')
@@ -385,6 +386,7 @@ def create_group():
         name = request.form.get("name")
         description = request.form.get("description")
         public = request.form.get("public")
+        password = request.form.get("password")
 
         # check if form is fealed
         if name == "" or description == "" or public == "":
@@ -395,6 +397,12 @@ def create_group():
             public = True
         else:
             public = False
+        
+        # check if password is fealed
+        if password == "" or password is None:
+            hash = None
+        else:
+            hash = generate_password_hash(password)
 
         # conect to db
         con = sqlite3.connect(DATABASE)
@@ -410,19 +418,15 @@ def create_group():
             return render_template("create-group.html", error="Group already exists!"), 400
 
         # create group
-        cur.execute("INSERT INTO `groups` (`name`, `description`, 'creator_id', 'public') VALUES (?, ?, ?, ?)", (name, description, session["user_id"], public))
+        cur.execute("INSERT INTO `groups` (`name`, `description`, 'creator_id', 'public', 'hash') VALUES (?, ?, ?, ?, ?)", (name, description, session["user_id"], public, hash))
         con.commit()
 
         # get id of created group
         cur.execute("SELECT last_insert_rowid()")
         group_id = cur.fetchone()[0]
 
-        # add user to group
-        cur.execute("INSERT INTO `group_members` (`group_id`, `user_id`) VALUES (?, ?)", (group_id, session["user_id"]))
-        con.commit()
-
         con.close() # close db
-        return render_template("create-group.html", success="Group created successfully!")
+        return redirect(f"/group/{group_id}/join")
     else:
         return render_template("create-group.html")
 
@@ -438,7 +442,7 @@ def browse_groups():
     # Using LEFT JOIN to show all groups, even if user isn't a member
     cur.execute("""
         SELECT 
-            g.*,
+            g.id, g.name, g.description, g.public, g.creator_id,
             CASE 
                 WHEN gm.user_id IS NOT NULL THEN 1 
                 ELSE 0 
@@ -468,7 +472,14 @@ def group(group_id):
     # if user is already in group
     if result is not None:
         con.close() # close db
-        return render_template("browse-groups.html", error="You are already in this group!"), 400
+        return render_template("browse-groups.html", error="You are already in this group! Or group does not exist"), 400
+
+    # check if group is password protected
+    cur.execute("SELECT `hash` FROM `groups` WHERE `id` = ?", (group_id,))
+    hash = cur.fetchone()[0]
+    if hash is not None:
+        con.close() # close db
+        return redirect("/group/" + str(group_id) + "/join/password")
 
     # add user to group
     cur.execute("INSERT INTO `group_members` (`group_id`, `user_id`) VALUES (?, ?)", (group_id, session["user_id"]))
@@ -477,6 +488,31 @@ def group(group_id):
     # close db
     con.close()
     return redirect("/browse-groups")
+
+@app.route("/group/<int:group_id>/join/password", methods=["GET", "POST"])
+@login_required
+def group_password(group_id):
+    if request.method == "POST":
+        password = request.form.get("password")
+
+        # check if password is correct
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+        cur.execute("SELECT `hash` FROM `groups` WHERE `id` = ?", (group_id,))
+        hash = cur.fetchone()[0]
+        if hash is None:
+            con.close() # close db
+            return render_template("group-password.html", error="Group is not password protected!"), 400
+        if check_password_hash(hash, password):
+            cur.execute("INSERT INTO `group_members` (`group_id`, `user_id`) VALUES (?, ?)", (group_id, session["user_id"]))
+            con.commit()
+            con.close() # close db
+            return redirect("/browse-groups")
+        else:
+            con.close() # close db
+            return render_template("group-password.html", error="Incorrect password!"), 400
+    else:
+        return render_template("group-password.html", group_id=group_id)
 
 @app.route("/group/<int:group_id>/leave")
 @login_required
