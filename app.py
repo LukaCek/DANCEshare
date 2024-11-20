@@ -97,22 +97,12 @@ def after_request(response):
 @app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
-    post = False
-    if request.method == "POST":
-        post = True
-        group = request.form.get("group")
-        q = request.form.get("q")
-        print(f"TODO TODO {group}")
-        print(f"TODO TODO {q}")
     # conect to db
     con = sqlite3.connect(DATABASE)
     cur = con.cursor()
 
     # get videos from user
-    if post and q:
-        cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id AND name LIKE :q",{"user_id": session["user_id"], "q": f"%{q}%"})
-    else:
-        cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id",{"user_id": session["user_id"]})
+    cur.execute("SELECT filepath, name, description FROM videos WHERE user_id = :user_id",{"user_id": session["user_id"]})
     videos = cur.fetchall()
     num_videos = len(videos)
 
@@ -128,6 +118,42 @@ def index():
     con.close()
 
     return render_template("index.html", username=session["user_id"] , num_videos=num_videos, videos=videos, groups=groups)
+
+@app.route("/search", methods=["GET", "POST"])
+@login_required
+def search():
+    if request.method == "GET":
+        q = request.args.get("q")
+        group = request.args.get("group")
+
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # get videos from user
+        if group == "All":
+            cur.execute("SELECT filepath, name FROM videos WHERE user_id = :user_id AND name LIKE :q" ,{"user_id": session["user_id"], "q": f"%{q}%"})
+        else:
+            cur.execute("SELECT filepath, name FROM videos WHERE user_id = :user_id AND name LIKE :q AND group_id = :group" ,{"user_id": session["user_id"], "q": f"%{q}%", "group": group})
+        videos = cur.fetchall()
+        print("#"*50)
+        print(f"q: {q}")
+        print(f"group: {group}")
+        print(videos)
+        print("#"*50)
+
+        # get groups
+        # get groups from user
+        cur.execute("""
+            SELECT g.id, g.name 
+            FROM group_members gm 
+            JOIN groups g ON gm.group_id = g.id 
+            WHERE gm.user_id = ?
+        """, (session["user_id"],))
+        groups = cur.fetchall()
+        con.close()
+
+        return render_template("search.html", videos=videos)
 
 @app.route("/delete_account", methods=["GET", "POST"])
 @login_required
@@ -332,10 +358,12 @@ def uploade():
         return render_template("uploade.html", groups=groups)
 
 @app.route("/options", methods=["GET"])
+@login_required
 def options():
     return render_template("options.html")
 
 @app.route("/create-group", methods=["GET", "POST"])
+@login_required
 def create_group():
     if request.method == "POST":
         name = request.form.get("name")
@@ -375,6 +403,7 @@ def create_group():
         return render_template("create-group.html")
 
 @app.route("/browse-groups", methods=["GET"])
+@login_required
 def browse_groups():
     '''list of public groups and groups user is in'''
     # conect to db
@@ -402,6 +431,7 @@ def browse_groups():
     return render_template("browse-groups.html", groups=groups, user_id=session["user_id"])
 
 @app.route("/group/<int:group_id>/join")
+@login_required
 def group(group_id):
     # conect to db
     con = sqlite3.connect(DATABASE)
@@ -425,6 +455,7 @@ def group(group_id):
     return redirect("/browse-groups")
 
 @app.route("/group/<int:group_id>/leave")
+@login_required
 def leave_group(group_id):
     # conect to db
     con = sqlite3.connect(DATABASE)
