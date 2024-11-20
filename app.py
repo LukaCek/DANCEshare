@@ -430,7 +430,7 @@ def create_group():
     else:
         return render_template("create-group.html")
 
-@app.route("/edit-group/<group_id>", methods=["GET", "POST"])
+@app.route("/group/<group_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_group(group_id):
     if request.method == "POST":
