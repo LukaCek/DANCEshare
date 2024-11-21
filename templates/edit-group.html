@@ -98,7 +98,7 @@ div.mb-3, p {
 
 {% block main %}
 <h1>Edit Group</h1><br>
-<form action="/edit-group/{{ group_id }}" method="post">
+<form action="/group/{{ group_id }}/edit" method="post">
     <div class="mb-3">
         <label for="name" class="form-label">Group name:</label>
         <input id="name" type="text" name="name" placeholder="Group Name" class="form-control" value="{{ name }}" required>
@@ -126,8 +126,20 @@ div.mb-3, p {
     </div>
     {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
     {% if success %}<p style="color: green; background-color: rgba(0, 128, 0, 0.352);"><b>{{ success }}</b></p>{% endif %}
+    <a id="delete" class="btn btn-danger" style="margin-right: 20px;">DELETE</a>
     <button type="submit" class="btn btn-primary">Update</button>
 </form>
 {% endblock %}
 
-{% block script %}<script></script>{% endblock %}
+{% block script %}<script>
+  /* delete group when button is clicked */
+  document.getElementById("delete").addEventListener("click", function() {
+    if (confirm("Are you sure you want to delete this group? And all the videos in it?")) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = "/group/{{ group_id }}/delete";
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+</script>{% endblock %}

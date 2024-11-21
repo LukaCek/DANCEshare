@@ -78,3 +78,32 @@ def video_size(video_path):
         size = os.path.getsize(video_path)
         video.release()
         return size
+
+def deleteVideoAndPicture(video_path, picture_path):
+    """
+    Delete the specified video and picture files from the filesystem.
+
+    Args:
+        video_path (str): Path to the video file to be deleted.
+        picture_path (str): Path to the picture file to be deleted.
+
+    Returns:
+        bool: True if both files were successfully deleted, False otherwise.
+    """
+    try:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+            print(f"Successfully deleted video: {video_path}")
+        else:
+            print(f"Video file not found: {video_path}")
+
+        if os.path.exists(picture_path):
+            os.remove(picture_path)
+            print(f"Successfully deleted picture: {picture_path}")
+        else:
+            print(f"Picture file not found: {picture_path}")
+
+        return True
+    except Exception as e:
+        print(f"Error deleting video or picture file: {e}")
+        return False

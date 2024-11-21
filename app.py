@@ -571,7 +571,7 @@ def group_password(group_id):
     else:
         return render_template("group-password.html", group_id=group_id)
 
-@app.route("/group/<int:group_id>/leave")
+@app.route("/group/<int:group_id>/leave", methods=["POST"])
 @login_required
 def leave_group(group_id):
     # conect to db
@@ -580,6 +580,37 @@ def leave_group(group_id):
 
     # remove user from group
     cur.execute("DELETE FROM `group_members` WHERE `group_id` = ? AND `user_id` = ?", (group_id, session["user_id"]))
+    con.commit()
+
+    # close db
+    con.close()
+    return redirect("/browse-groups")
+
+@app.route("/group/<int:group_id>/delete", methods=["POST"])
+@login_required
+def delete_group(group_id):
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+
+    # delete all videos and pictures in group
+    # get if of all videos to delete
+    cur.execute("SELECT `id` FROM `videos` WHERE `group_id` = ?", (group_id,))
+    videos = cur.fetchall()
+
+    # loop through videos and delete
+    for video in videos:
+        cur.execute("SELECT filepath, image_path FROM videos WHERE id = ?", (video[0],))
+        path = cur.fetchone()
+        result = video_helper.deleteVideoAndPicture(path[0], path[1])
+        # delete video from db
+        if result == True:
+            cur.execute("DELETE FROM `videos` WHERE `id` = ?", (video[0],))
+            con.commit()
+    
+    # delete group
+    cur.execute("DELETE FROM `groups` WHERE `id` = ?", (group_id,))
+    cur.execute("DELETE FROM `group_members` WHERE `group_id` = ?", (group_id,))
     con.commit()
 
     # close db
