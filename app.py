@@ -144,7 +144,6 @@ def search():
         if group == "All":
             print("#"*50 + "---")
             print(f"groupsUserIsIn: {groupsUserIsIn}")
-            # TODO: fix
             videos = []
             for g in groupsUserIsIn:
                 cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q" ,{"group": g[0], "q": f"%{q}%"})
@@ -153,11 +152,6 @@ def search():
         else:
             cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q AND group_id = :group" ,{"group": group, "q": f"%{q}%", "group": group})
             videos = cur.fetchall()
-        print("#"*50)
-        print(f"q: {q}")
-        print(f"group: {group}")
-        print(videos)
-        print("#"*50)
 
         # get groups
         # get groups from user
@@ -172,10 +166,36 @@ def search():
 
         return render_template("search.html", videos=videos)
 
-@app.route("/delete_account", methods=["GET", "POST"])
+@app.route("/delete_account/<int:user_id>", methods=["POST", "GET"])
 @login_required
-def delete_account():
-    print("TODO TODO")
+def delete_account(user_id):
+    if session["user_id"] == user_id:
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # get if of all videos to delete
+        cur.execute("SELECT `id` FROM `videos` WHERE `user_id` = ?", (user_id,))
+        videos = cur.fetchall()
+
+        # loop through videos and delete
+        for video in videos:
+            cur.execute("SELECT filepath, image_path FROM videos WHERE id = ?", (video[0],))
+            path = cur.fetchone()
+            result = video_helper.deleteVideoAndPicture(path[0], path[1])
+            # delete video from db
+            if result == True:
+                cur.execute("DELETE FROM `videos` WHERE `id` = ?", (video[0],))
+
+        # delete user
+        cur.execute("DELETE FROM users WHERE id = :user_id",{"user_id": user_id})
+        cur.execute("DELETE FROM group_members WHERE user_id = :user_id",{"user_id": user_id})
+        con.commit()
+        con.close()
+        session.clear()
+        return redirect("/")
+    else:
+        return "You are not the owner of this account", 401
 
 @app.route("/logout", methods=["GET", "POST"])
 def logout():
@@ -269,6 +289,11 @@ def uploade():
         if not file:
             print("No file was uploaded.")
             return render_template("uploade.html", error="No file was uploaded."), 400
+        
+        # Check if group is selected
+        if group is None:
+            print("No group was selected.")
+            return render_template("uploade.html", error="No group was selected."), 400
         
         # Check if file type is allowed
         if allowed_file(file.filename, ALLOWED_EXTENSIONS):
@@ -571,7 +596,7 @@ def group_password(group_id):
     else:
         return render_template("group-password.html", group_id=group_id)
 
-@app.route("/group/<int:group_id>/leave", methods=["POST"])
+@app.route("/group/<int:group_id>/leave", methods=["GET"])
 @login_required
 def leave_group(group_id):
     # conect to db
