@@ -1,4 +1,3 @@
-// FIX: Uncaught TypeError: q.addEventListener is not a function 
 let q = document.getElementById("q");
 let group = document.getElementById("group");
 

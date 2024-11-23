@@ -440,7 +440,7 @@ def create_group():
         # if group exists
         if result is not None:
             con.close() # close db
-            return render_template("create-group.html", error="Group already exists!"), 400
+            return render_template("create-group.html", error="Group name already exists!"), 400
 
         # create group
         cur.execute("INSERT INTO `groups` (`name`, `description`, 'creator_id', 'public', 'hash') VALUES (?, ?, ?, ?, ?)", (name, description, session["user_id"], public, hash))
@@ -515,6 +515,11 @@ def edit_group(group_id):
 @app.route("/browse-groups", methods=["GET"])
 @login_required
 def browse_groups():
+    return render_template("browse-groups.html")
+
+@app.route("/browse-groups-api", methods=["GET"])
+@login_required
+def browse_groups_api():
     '''list of public groups and groups user is in'''
     # conect to db
     con = sqlite3.connect(DATABASE)
@@ -538,7 +543,7 @@ def browse_groups():
 
     # close db
     con.close()
-    return render_template("browse-groups.html", groups=groups, user_id=session["user_id"])
+    return render_template("browse-groups-api.html", groups=groups, user_id=session["user_id"])
 
 @app.route("/group/<int:group_id>/join")
 @login_required
