@@ -1,8 +1,4 @@
-{% extends "layout.html" %}
-
-{% block title %}Create Group{% endblock %}
-
-{% block styles %}<style>
+<style>
     body {
         text-align: left;
     }
@@ -25,9 +21,8 @@
     .description {
         margin-top: 5px;
     }
-</style>{% endblock %}
+</style>
 
-{% block main %}
 {% for group in groups %}
 <!-- check if user owns the group OR if the group is public -->
 {% if group[3] or user_id == group[4] %}
@@ -52,4 +47,3 @@
     </div>
 </div>
 {% endif %}{% endfor %}
-{% endblock %}

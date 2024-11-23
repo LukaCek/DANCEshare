@@ -520,6 +520,7 @@ def browse_groups():
 @app.route("/browse-groups-api", methods=["GET"])
 @login_required
 def browse_groups_api():
+    q = request.args.get("q")
     '''list of public groups and groups user is in'''
     # conect to db
     con = sqlite3.connect(DATABASE)
@@ -537,8 +538,9 @@ def browse_groups_api():
         FROM groups g
         LEFT JOIN group_members gm ON g.id = gm.group_id 
             AND gm.user_id = ?
+        WHERE g.name LIKE ? OR g.description LIKE ?
         ORDER BY is_member DESC
-    """, (session["user_id"],))
+    """, (session["user_id"], f"%{q}%", f"%{q}%"))
     groups = cur.fetchall()
 
     # close db
