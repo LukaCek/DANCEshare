@@ -25,14 +25,11 @@ p {
 <div class="menu-item" onclick="handleOption('create')">
     <p>Create Group</p>
 </div><hr>
-<div class="menu-item" onclick="handleOption('join')">
-    <p>Join Private Group</p>
-</div><hr>
-<div class="menu-item" onclick="handleOption('leave')">
-    <p>Leave private Group</p>
-</div><hr>
 <div class="menu-item" onclick="handleOption('browse')">
     <p>Browse Group</p>
+</div><hr>
+<div class="menu-item" onclick="handleOption('delete')">
+    <p style="color: red;">Delete Acount</p>
 </div><hr>
 {% endblock %}
 
@@ -42,14 +39,21 @@ function handleOption(action) {
         case 'create':
             window.location.href = '/create-group';
             break;
-        case 'join':
-            window.location.href = '/join-group';
-            break;
         case 'browse':
             window.location.href = '/browse-groups';
             break;
-        case 'leave':
-            window.location.href = '/leave-group';
+        // TODO: add
+        case 'delete':
+            alert('Are you sure you want to delete your account?\nUsername: {{ username }}.');
+            alert('This action cannot be undone.\nUsername: {{ username }}.');
+            alert('All data will be permanently deleted.\nUsername: {{ username }}.');
+            alert('This includes all groups, videos, and comments.\nUsername: {{ username }}.');
+            prompt("Type DELETE ACCOUNT to confirm:\nUsername: {{ username }}.");
+            if (prompt == 'DELETE ACCOUNT') {
+                window.location.href = '/delete-account/{{ user_id }}';
+                break;
+            }
+            alert('Account was not deleted.');
             break;
     }
 }

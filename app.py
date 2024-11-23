@@ -402,7 +402,12 @@ def uploade():
 @app.route("/options", methods=["GET"])
 @login_required
 def options():
-    return render_template("options.html")
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+    cur.execute("SELECT username FROM users WHERE id = ?", (session["user_id"],))
+    username = cur.fetchone()[0]
+    con.close()
+    return render_template("options.html", user_id=session["user_id"], username=username)
 
 @app.route("/create-group", methods=["GET", "POST"])
 @login_required
