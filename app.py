@@ -545,7 +545,7 @@ def browse_groups_api():
 
     # close db
     con.close()
-    return render_template("browse-groups-api.html", groups=groups, user_id=session["user_id"])
+    return render_template("browse-groups-api.html", groups=groups, user_id=session["user_id"], q=q)
 
 @app.route("/group/<int:group_id>/join")
 @login_required
