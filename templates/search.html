@@ -1,24 +1,40 @@
+<style>
+    .name-box {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .name-box:hover {
+        background-color: #e9ecef;
+    }
+    .group-name {
+        font-size: 13px;
+        color: #6c757d;
+    }
+</style>
 <div class="row row-cols-auto">
-{% for video in videos %}
-<div class="card h-100">
-    <!-- video's video-->
-    {% if video[0] %}
-    <video controls class="video">
-        <source src="{{ video[0] }}" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-    {% endif %}
-    <!-- video's details-->
-    <div class="text-center name-box">
-        <!-- video's name-->
-        <h5 class="fw-bolder">{{ video[1] }}</h5>
+    {% for video in videos %}
+    <div class="card h-100">
+        <!-- video's video-->
+        {% if video[0] %}
+        <video controls class="video">
+            <source src="{{ video[0] }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        {% endif %}
+        <!-- video's details-->
+        <div class="text-center name-box" video-id="{{ video[2] }}">
+            <!-- video's name-->
+            <h5 class="fw-bolder">{{ video[1] }} </h5>
+            <span class="group-name">{{ video[3] }}</span>
+        </div>
     </div>
-</div>
-{% endfor %}
-{% if videos|length == 0 %}
-<div style="color: gray; margin-left: auto; margin-right: auto; padding-top: 20px;">
-    <p style="margin: 0%;">No videos found.</p>
-</div>
-{% endif %}
-<div style="margin-bottom: 300px;"></div>
+    {% endfor %}
+    {% if videos|length == 0 %}
+    <div style="color: gray; margin-left: auto; margin-right: auto; padding-top: 20px;">
+        <p style="margin: 0%;">No videos found.</p>
+    </div>
+    {% endif %}
+    <div style="margin-bottom: 300px;"></div>
 </div>

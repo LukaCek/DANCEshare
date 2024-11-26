@@ -120,51 +120,45 @@ def index():
 
     return render_template("index.html", username=session["user_id"] , num_videos=num_videos, videos=videos, groups=groups)
 
-@app.route("/search", methods=["GET", "POST"])
+@app.route("/search", methods=["GET"])
 @login_required
 def search():
-    if request.method == "GET":
-        q = request.args.get("q")
-        group = request.args.get("group")
+    q = request.args.get("q")
+    group = request.args.get("group")
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+    # gets groups in vitch is user
+    cur.execute("""
+        SELECT g.id 
+        FROM group_members gm 
+        JOIN groups g ON gm.group_id = g.id 
+        WHERE gm.user_id = ?
+    """, (session["user_id"],))
+    groupsUserIsIn = cur.fetchall()
+    # get videos from user
+    if group == "All":
+        videos = []
+        for g in groupsUserIsIn:
+            cur.execute("SELECT filepath, videos.name, videos.id, groups.name FROM videos JOIN groups ON videos.group_id = groups.id WHERE videos.group_id = :group AND videos.name LIKE :q" ,{"group": g[0], "q": f"%{q}%"})
+            videos += cur.fetchall()
+            print(f"videos: {videos}")
+    else:
+        cur.execute("SELECT filepath, videos.name, videos.id, groups.name FROM videos JOIN groups ON videos.group_id = groups.id WHERE videos.group_id = :group AND videos.name LIKE :q AND videos.group_id = :group" ,{"group": group, "q": f"%{q}%", "group": group})
+        videos = cur.fetchall()
 
-        # conect to db
-        con = sqlite3.connect(DATABASE)
-        cur = con.cursor()
-
-        # gets groups in vitch is user
-        cur.execute("""
-            SELECT g.id 
-            FROM group_members gm 
-            JOIN groups g ON gm.group_id = g.id 
-            WHERE gm.user_id = ?
-        """, (session["user_id"],))
-        groupsUserIsIn = cur.fetchall()
-
-        # get videos from user
-        if group == "All":
-            print("#"*50 + "---")
-            print(f"groupsUserIsIn: {groupsUserIsIn}")
-            videos = []
-            for g in groupsUserIsIn:
-                cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q" ,{"group": g[0], "q": f"%{q}%"})
-                videos += cur.fetchall()
-                print(f"videos: {videos}")
-        else:
-            cur.execute("SELECT filepath, name FROM videos WHERE group_id = :group AND name LIKE :q AND group_id = :group" ,{"group": group, "q": f"%{q}%", "group": group})
-            videos = cur.fetchall()
-
-        # get groups
-        # get groups from user
-        cur.execute("""
-            SELECT g.id, g.name 
-            FROM group_members gm 
-            JOIN groups g ON gm.group_id = g.id 
-            WHERE gm.user_id = ?
-        """, (session["user_id"],))
-        groups = cur.fetchall()
-        con.close()
-
-        return render_template("search.html", videos=videos)
+    # get groups
+    # get groups from user
+    cur.execute("""
+        SELECT g.id, g.name
+        FROM group_members gm 
+        JOIN groups g ON gm.group_id = g.id 
+        WHERE gm.user_id = ?
+    """, (session["user_id"],))
+    groups = cur.fetchall()
+    con.close()
+    
+    return render_template("search.html", videos=videos)
 
 @app.route("/delete_account/<int:user_id>", methods=["POST", "GET"])
 @login_required
@@ -459,6 +453,111 @@ def create_group():
         return redirect(f"/group/{group_id}/join")
     else:
         return render_template("create-group.html")
+
+@app.route("/video/<video_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_video(video_id):
+    if request.method == "GET":
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        # check if video exists
+        cur.execute("SELECT * FROM videos WHERE id = ?", (video_id,))
+        video = cur.fetchone()
+        if video is None:
+            con.close()
+            return "Video does not exist! Go <a href='/'>home</a>.", 404
+        
+        user_is_allowed_to_edit = False
+        # check if user is allowed to edit video
+        # check if user is owner of video
+        cur.execute("SELECT user_id FROM videos WHERE id = ?", (video_id,))
+        video_user_id = cur.fetchone()[0]
+        if video_user_id == session["user_id"]:
+            user_is_allowed_to_edit = True
+
+        # check if user is creator of group in which video is
+        cur.execute("SELECT creator_id FROM groups WHERE id = (SELECT group_id FROM videos WHERE id = ?)", (video_id,))
+        group_user_id = cur.fetchone()[0]
+        if group_user_id == session["user_id"]:
+            user_is_allowed_to_edit = True
+
+        if not user_is_allowed_to_edit:
+            con.close()
+            return "You are not allowed to edit this video! Go <a href='/'>home</a>.", 403
+        
+        # get video data
+        cur.execute("SELECT name, filepath, description, time, file_size FROM videos WHERE id = ?", (video_id,))
+        video = cur.fetchone()
+
+        con.close()
+        return render_template("edit-video.html", video_id=video_id, video=video)
+    else:
+        name = request.form.get("name")
+        description = request.form.get("description")
+
+        # conect to db
+        con = sqlite3.connect(DATABASE)
+        cur = con.cursor()
+
+        user_is_allowed_to_edit = False
+        # check if user is allowed to edit video
+        # check if user is owner of video
+        cur.execute("SELECT user_id FROM videos WHERE id = ?", (video_id,))
+        video_user_id = cur.fetchone()[0]
+        if video_user_id == session["user_id"]:
+            user_is_allowed_to_edit = True
+
+        # check if user is creator of group in which video is
+        cur.execute("SELECT creator_id FROM groups WHERE id = (SELECT group_id FROM videos WHERE id = ?)", (video_id,))
+        group_user_id = cur.fetchone()[0]
+        if group_user_id == session["user_id"]:
+            user_is_allowed_to_edit = True
+
+        if not user_is_allowed_to_edit:
+            con.close()
+            return "You are not allowed to edit this video! Go <a href='/'>home</a>.", 40
+
+        # update video
+        cur.execute("UPDATE `videos` SET `name` = ?, `description` = ? WHERE `id` = ?", (name, description, video_id))
+        con.commit()
+
+        con.close() # close db
+        return redirect(f"/")
+
+
+@app.route("/video/<video_id>/delete", methods=["POST"])
+@login_required
+def delete_video(video_id):
+    # conect to db
+    con = sqlite3.connect(DATABASE)
+    cur = con.cursor()
+
+    user_is_allowed_to_edit = False
+    # check if user is allowed to edit video
+    # check if user is owner of video
+    cur.execute("SELECT user_id FROM videos WHERE id = ?", (video_id,))
+    video_user_id = cur.fetchone()[0]
+    if video_user_id == session["user_id"]:
+        user_is_allowed_to_edit = True
+
+    # check if user is creator of group in which video is
+    cur.execute("SELECT creator_id FROM groups WHERE id = (SELECT group_id FROM videos WHERE id = ?)", (video_id,))
+    group_user_id = cur.fetchone()[0]
+    if group_user_id == session["user_id"]:
+        user_is_allowed_to_edit = True
+
+    if not user_is_allowed_to_edit:
+        con.close()
+        return "You are not allowed to edit this video! Go <a href='/'>home</a>.", 40
+    
+    # delit video
+    cur.execute("DELETE FROM `videos` WHERE `id` = ?", (video_id,))
+    con.commit()
+
+    con.close() # close db
+    return redirect(f"/")
 
 @app.route("/group/<group_id>/edit", methods=["GET", "POST"])
 @login_required
