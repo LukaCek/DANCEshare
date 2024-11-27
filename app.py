@@ -12,7 +12,7 @@ from tomp4 import convert_to_mp4, video_size_save
 
 UPLOAD_FOLDER = 'static/uploads/vid/'
 SIZE_ALLOWED = 2 * 1024 * 1024 * 1024
-DATABASE = 'danceshare.db'
+DATABASE = 'data/danceshare.db'
 ALLOWED_EXTENSIONS = [
         'mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm',
         'm4v', '3gp', 'ts', 'mts', 'm2ts', 'vob', 'ogv',
@@ -756,4 +756,5 @@ def delete_group(group_id):
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
-app.run(debug=True, host="0.0.0.0", port=8000)
+
+app.run(host="0.0.0.0", port=8080)
