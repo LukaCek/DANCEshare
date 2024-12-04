@@ -1,37 +1,60 @@
-document.querySelector('form').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent the default form submission
+const CHUNK_SIZE = 1.5 * 1024 * 1024; // 1.5MB to account for overhead
 
-    var loader = document.getElementById('loader'); // Get the loader element
-    loader.style.display = 'block'; // Show the loader
-
-    let formData = new FormData(this); // Create FormData object
-
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log(data); // Handle the response data
-        loader.style.display = 'none'; // Hide the loader when file is uploaded
-
-        if (data.error) {
-            alert(data.error); // Display error message if any
-        } else {
-            alert('Video uploaded successfully!'); // Display success message
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error); // Handle errors
-        loader.style.display = 'none'; // Hide the loader in case of error
-    });
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
     
-    const xhr = new XMLHttpRequest();
-    xhr.upload.addEventListener('progress', (e) => {
-      const percent = (e.loaded / e.total) * 100;
-      console.log(`Uploaded: ${percent}%`);
-      progressBar.style.width = `${percent}%`;
-      progressBar.textContent = `${percent}%`;
-    });
-});
+    const file = document.getElementById('video').files[0];
+    const name = document.getElementById('name').value;
+    const description = document.getElementById('description').value;
+    const group = document.getElementById('group').value;
+    
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
 
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    document.getElementById('progress').style.display = 'block';
+    document.getElementById('status').textContent = 'Starting upload...';
+
+    try {
+        for (let chunkNumber = 0; chunkNumber < totalChunks; chunkNumber++) {
+            const start = chunkNumber * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append('file', chunk, 'chunk');
+            formData.append('chunk_number', chunkNumber.toString());
+            formData.append('total_chunks', totalChunks.toString());
+            formData.append('video_name', name);
+            formData.append('description', description);
+            formData.append('file_type', file.type);
+            formData.append('group', group);
+
+            console.log('Sending chunk', chunkNumber, 'of', totalChunks);
+
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Upload failed: ${errorText}`);
+            }
+
+            const result = await response.json();
+            console.log('Chunk response:', result);
+
+            const progress = ((chunkNumber + 1) / totalChunks) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('status').textContent = `Uploading: ${Math.round(progress)}%`;
+        }
+        
+        document.getElementById('status').textContent = 'Upload complete!';
+    } catch (error) {
+        console.error('Upload error:', error);
+        document.getElementById('status').textContent = 'Upload failed: ' + error.message;
+    }
+});

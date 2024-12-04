@@ -1,10 +1,13 @@
 import os
 import sqlite3
-from flask import Flask, flash, redirect, render_template, request, session, g, url_for
+from flask import Flask, flash, redirect, render_template, request, session, g, url_for,  jsonify, make_response
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import random
 from time import time as nowtime
+from io import BytesIO
+from werkzeug.datastructures import FileStorage
+import traceback
 
 import video_helper
 from helpers import login_required, allowed_file
@@ -27,6 +30,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 # Configure application
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['TEMP_FOLDER'] = 'static/uploads/tmp/'
 
 # Create database if it doesn't exist
 if not os.path.exists(DATABASE):
@@ -274,25 +278,141 @@ def register():
 @login_required
 def uploade():
     if request.method == "POST":
-        file = request.files['video']
-        group = request.form.get("group")
-        name = request.form.get("name")
-        description = request.form.get("description")
+        end = False
+        try:
+            print("Received upload request")
+            print("Form data:", request.form)
+            print("Files:", request.files)
+
+            if 'file' not in request.files:
+                return make_response(jsonify({'error': 'No file part'}), 400)
+            
+            file = request.files['file']
+            print("File received:", file.filename)
+            
+            # Get form data with error handling
+            try:
+                chunk_number = int(request.form.get('chunk_number', '0'))
+                total_chunks = int(request.form.get('total_chunks', '0'))
+                file_type = request.form.get('file_type', '')
+                video_name = request.form.get('video_name', '')
+                description = request.form.get('description', '')
+                group = request.form.get('group', '')
+                
+                # Get file extension from MIME type
+                extension = ''
+                if '/' in file_type:
+                    extension = '.' + file_type.split('/')[-1]
+                
+                filename = f"{session['user_id']}_{video_name}{extension}"
+            except ValueError as e:
+                print("Error parsing form data:", str(e))
+                return make_response(jsonify({'error': 'Invalid form data'}), 400)
+            
+            print(f"Processing chunk {chunk_number + 1} of {total_chunks} for file {filename}")
+            
+            # Create a temporary folder for chunks
+            temp_folder = os.path.join(app.config['TEMP_FOLDER'], filename)
+            if not os.path.exists(temp_folder):
+                os.makedirs(temp_folder)
+            
+            # Save the chunk
+            chunk_path = os.path.join(temp_folder, f'chunk_{chunk_number}')
+            print(f"Saving chunk to: {chunk_path}")
+            file.save(chunk_path)
+            
+            # If this is the last chunk, combine all chunks
+            if chunk_number == total_chunks - 1:
+                print("Processing final chunk, combining files...")
+                
+                try:
+                    # Create BytesIO object to store file in memory
+                    file_stream = BytesIO()
+                    
+                    # Combine all chunks into memory
+                    for i in range(total_chunks):
+                        chunk_file = os.path.join(temp_folder, f'chunk_{i}')
+                        if os.path.exists(chunk_file):
+                            with open(chunk_file, 'rb') as infile:
+                                file_stream.write(infile.read())
+                        else:
+                            raise Exception(f'Missing chunk {i}')
+                    
+                    # Reset stream position to start
+                    file_stream.seek(0)
+                    
+                    # Create FileStorage object
+                    file = FileStorage(
+                        stream=file_stream,
+                        filename=filename,
+                        content_type=file_type
+                    )
+                    
+                    # Save to disk (optional, you can remove this if you don't need it)
+                    #final_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    #final_file.save(final_path)
+                    
+                    # Prints all received metadata
+                    print(" Metadata" * 5 + ":")
+                    print(f'Name: {video_name}')
+                    print(f'Description: {description}')
+                    print(f'File Type: {file_type}')
+                    print(f'Group: {group}')
+                    print(f'FileStorage object created with size: {file_stream.tell()} bytes')
+                    
+                    # Clean up chunks
+                    for i in range(total_chunks):
+                        try:
+                            chunk_file = os.path.join(temp_folder, f'chunk_{i}')
+                            if os.path.exists(chunk_file):
+                                os.remove(chunk_file)
+                        except Exception as e:
+                            print(f"Error removing chunk {i}: {str(e)}")
+                    
+                    try:
+                        if os.path.exists(temp_folder):
+                            os.rmdir(temp_folder)
+                    except Exception as e:
+                        print(f"Error removing temp folder: {str(e)}")
+                    
+                    print(f"File reconstruction complete")
+                    # Do something with the final file ### END ###
+                    end = True
+                
+                except Exception as e:
+                    print(f"Error during file reconstruction: {str(e)}")
+                    traceback.print_exc()
+                    return make_response(jsonify({'error': f'File reconstruction failed: {str(e)}'}), 500)
+            
+            if end != True:
+                response = make_response(jsonify({'message': f'Chunk {chunk_number + 1} of {total_chunks} received'}))
+                return response, 200
+            
+        except Exception as e:
+            print("Error during upload:")
+            print(str(e))
+            traceback.print_exc()
+            response = make_response(jsonify({'error': str(e)}))
+            return response, 500
+#       file = request.files['video']
+#       group = request.form.get("group")
+#       name = request.form.get("name")
+#       description = request.form.get("description")
 
         # Check if file was uploaded
         if not file:
             print("No file was uploaded.")
-            return render_template("uploade.html", error="No file was uploaded."), 400
+            return make_response(jsonify({'error': "No file was uploaded."})), 400
         
         # Check if group is selected
         if group is None:
             print("No group was selected.")
-            return render_template("uploade.html", error="No group was selected."), 400
+            return make_response(jsonify({'error': "No group was selected."})), 400
         
         # Check if file type is allowed
         if allowed_file(file.filename, ALLOWED_EXTENSIONS):
             print("File type not allowed.")
-            return render_template("uploade.html", error="File type not allowed."), 400
+            return make_response(jsonify({'error': "File type not allowed."})), 400
 
         # conect to db
         con = sqlite3.connect(DATABASE)
@@ -309,15 +429,13 @@ def uploade():
         # get file type
         filetype = file.filename.split('.')[-1].lower()
         
-        # rename file to avoid overwriting existing files (in temp folder)
-        file.filename = f"{session['user_id']}_{random.randint(1, 9999)}_{round(nowtime()*1000000)}.{filetype}"
 
         # check if file is mp4 widouth modification
         if filetype != 'mp4':
             print("Converting to mp4")
             temp = convert_to_mp4(file)
             if temp is None:
-                return render_template("uploade.html", error="File conversion failed."), 400
+                return make_response(jsonify({'error': "File conversion failed."})), 400
             converted_file = temp[0]
             file_size = temp[1]
             print(f"Converted file: {converted_file}")
@@ -332,7 +450,7 @@ def uploade():
             file = f[0]
 
             if file_size is None:
-                return render_template("uploade.html", error="Failed to get video size(mp4)."), 400
+                return make_response(jsonify({'error': "Failed to get video size(mp4)."})), 400
 
         file_path = os.path.join(UPLOAD_FOLDER, f"{id}.mp4")
         image_path = f"{UPLOAD_FOLDER}{id}.jpg"
@@ -348,8 +466,8 @@ def uploade():
         if size + file_size > SIZE_ALLOWED:
             error = f"Space limit has been reached {SIZE_ALLOWED / 1024 / 1024 / 1024} GB. <br>You have {SIZE_ALLOWED / 1024 / 1024 / 1024 - size / 1024 / 1024 / 1024} <br>Upgrade your plan or delete some videos"
             print(error)
-            return render_template("uploade.html", error=error), 400
-        # vrite to user table size
+            return make_response(jsonify({'error': f"{error}"})), 400
+        # write to user table size
         cur.execute("UPDATE users SET size = :size WHERE id = :user_id",{"size": size + file_size, "user_id": session["user_id"]})
         con.commit()
 
@@ -359,7 +477,7 @@ def uploade():
                 os.makedirs(UPLOAD_FOLDER)
             file.save(file_path)
         else:
-            return render_template("uploade.html", error="Error 123"), 400
+            return make_response(jsonify({'error': "Error 123"})), 400
 
         # Get time from video
         time = video_helper.video_length(file_path)
@@ -372,10 +490,10 @@ def uploade():
         print(f"File size: {file_size}")
 
         cur.execute("INSERT INTO `videos` (`name`, `filepath`, `user_id`, `filetype`, `description`, `group_id`, `time`, `image_path`, `file_size`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                    , (name, file_path, session["user_id"], filetype, description, group, time, image_path, file_size))
+                    , (video_name, file_path, session["user_id"], filetype, description, group, time, image_path, file_size))
         con.commit()
 
-        return render_template("uploade.html", massage="Video uploaded successfully")
+        return make_response(jsonify({'error': "Video uploaded successfully"})), 200
     else:
         # conect to db
         con = sqlite3.connect(DATABASE)
