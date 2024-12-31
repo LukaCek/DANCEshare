@@ -1,7 +1,7 @@
 # DANCEshare
 #### <URL https:>
 #### DANCEshare is a web platform designed for sharing and discovering dance choreography. It allows users to upload and watch dance videos, connect with other dancers, and build a community united by their passion for dance. Inspires creativity and brings dancers together from all over the world.
-<iframe width="560" height="315" src="https://www.youtube.com/embed/-x9LVra2KSQ?si=RAH7QY_TsiIEouep" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/-x9LVra2KSQ/maxresdefault.jpg)](https://youtu.be/-x9LVra2KSQ)
 ## File Structure
 - __data__ : in it is located database (danceshare.db).
 - __static__ : in it are .js scripts and main style.
